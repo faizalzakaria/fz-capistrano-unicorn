@@ -1,0 +1,9 @@
+# Monit configuration for Puma
+# Service name: <%= unicorn_monit_service_name %>
+#
+
+check process <%= unicorn_monit_service_name %>
+with pidfile "<%= fetch(:unicorn_pid) %>"
+  start program = "/bin/su - <%= unicorn_user(@role) %> -c 'cd <%= current_path %> && source .env && bundle exec unicorn_rails -c <%= fetch(:unicorn_conf) %> -E <%= fetch(:unicorn_env) %> -D'" with timeout 30 seconds
+  stop program =  "/bin/su - <%= unicorn_user(@role) %> -c '/usr/bin/test -s <%= fetch(:unicorn_pid) %> && /bin/kill -QUIT `cat <%= fetch(:unicorn_pid) %>`'"
+

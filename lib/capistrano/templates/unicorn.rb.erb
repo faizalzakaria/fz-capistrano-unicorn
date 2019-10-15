@@ -1,0 +1,41 @@
+# frozen_string_literal: true
+
+worker_processes <%= fetch(:unicorn_workers) %>
+
+working_directory '<%= current_path %>'
+
+listen '<%= fetch(:unicorn_socket) %>', backlog: 64
+
+timeout <%= fetch(:unicorn_timeout) %>
+
+pid '<%= fetch(:unicorn_pid) %>'
+
+stderr_path "<%= fetch(:unicorn_error_log) %>"
+stdout_path "<%= fetch(:unicorn_access_log) %>"
+
+preload_app <%= fetch(:unicorn_preload_app) %>
+
+GC.respond_to?(:copy_on_write_friendly=) &&
+  (GC.copy_on_write_friendly = true)
+
+check_client_connection false
+
+before_fork do |server, _worker|
+  old_pid = "<%= fetch(:unicorn_pid) %>.oldbin"
+
+  if File.exist?(old_pid) && server.pid != old_pid
+    begin
+      Process.kill('QUIT', File.read(old_pid).to_i)
+    rescue Errno::ENOENT, Errno::ESRCH
+      # someone else did our job for us
+    end
+  end
+
+  defined?(ActiveRecord::Base) &&
+    ActiveRecord::Base.connection.disconnect!
+end
+
+after_fork do |_server, _worker|
+  defined?(ActiveRecord::Base) &&
+    ActiveRecord::Base.establish_connection
+end
